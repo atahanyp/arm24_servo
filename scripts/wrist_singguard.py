@@ -56,15 +56,12 @@ class WristGuard:
         err = q_target - self.q5
         v_rad_s = max(-self.max_rad_s, min(self.gain * err, self.max_rad_s))  # saturasyon
 
-        # unitless'a çevir (±1)
-        u = v_rad_s / max(self.scale_joint, 1e-6)
-        u = max(-1.0, min(u, 1.0))
-
+        # speed_units modu: direkt rad/s gönder
         jj = JointJog()
         jj.header.stamp = rospy.Time.now()
         jj.header.frame_id = "arm_base"   # fark etmez; boş da olabilir
         jj.joint_names = [self.joint_name]
-        jj.velocities  = [u]              # unitless hız
+        jj.velocities  = [v_rad_s]        # rad/s (speed_units)
         jj.displacements = [0.0]          # kullanmıyoruz ama dolduralım
         self.pub.publish(jj)
 

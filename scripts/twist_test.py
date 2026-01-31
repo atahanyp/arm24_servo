@@ -38,30 +38,30 @@ def clamp(x, lo, hi): return max(lo, min(hi, x))
 
 def main():
     rospy.init_node("twist_teleop")
-    topic    = rospy.get_param("~topic", "/servo_server/delta_twist_cmds")
-    frame_id = rospy.get_param("~frame_id", "arm_base")
-    rate_hz  = float(rospy.get_param("~rate", 100.0))
+    
+    # Sabit parametreler
+    topic    = "/servo_server/delta_twist_cmds"
+    frame_id = "arm_base"
+    rate_hz  = 100.0
 
-    # mode: "unitless" ([-1,1]) ya da "speed_units" (m/s, rad/s).
-    mode     = rospy.get_param("~mode", "unitless").lower()
+    # Hız limitleri (m/s, rad/s)
+    step      = 0.02   # Her tuşta artış miktarı
+    lin_max   = 0.25   # Maksimum lineer hız (m/s)
+    ang_max   = 0.60   # Maksimum açısal hız (rad/s)
+    decay     = 0.90   # Tuş bırakınca yavaşlama katsayısı
 
-    # unitless için step, speed_units için mutlak max hızlar (yine de step kullanıyoruz)
-    step            = float(rospy.get_param("~step", 0.03))   # her tuşta değişim
-    lin_max_mps     = float(rospy.get_param("~lin_max", 0.25))
-    ang_max_radps   = float(rospy.get_param("~ang_max", 0.60))
-    decay           = float(rospy.get_param("~decay", 0.90))  # tuş gelmezse sönüm
-
-    pub = rospy.Publisher(topic, TwistStamped, queue_size=50)
+    pub = rospy.Publisher(topic, TwistStamped, queue_size=10)
     rate = rospy.Rate(rate_hz)
 
-    # hız hedefleri (unitless veya speed_units’e göre)
+    # Mevcut hızlar
     lx=ly=lz=0.0
     ax=ay=az=0.0
 
     old_attr = termios.tcgetattr(sys.stdin)
     tty.setcbreak(sys.stdin.fileno())
     print(HELP)
-    print("Publishing to %s @ %s Hz | frame_id=%s | MODE=%s" % (topic, rate_hz, frame_id, mode.upper()))
+    print("Publishing to %s @ %.0f Hz" % (topic, rate_hz))
+    print("Max: linear=%.2f m/s, angular=%.2f rad/s, step=%.3f\n" % (lin_max, ang_max, step))
 
     try:
         while not rospy.is_shutdown():
@@ -95,17 +95,13 @@ def main():
                 elif key == 'q':
                     break
 
-                # clamp
-                if mode == "unitless":
-                    lx = clamp(lx, -1.0, 1.0); ly = clamp(ly, -1.0, 1.0); lz = clamp(lz, -1.0, 1.0)
-                    ax = clamp(ax, -1.0, 1.0); ay = clamp(ay, -1.0, 1.0); az = clamp(az, -1.0, 1.0)
-                else:
-                    lx = clamp(lx, -lin_max_mps, lin_max_mps)
-                    ly = clamp(ly, -lin_max_mps, lin_max_mps)
-                    lz = clamp(lz, -lin_max_mps, lin_max_mps)
-                    ax = clamp(ax, -ang_max_radps, ang_max_radps)
-                    ay = clamp(ay, -ang_max_radps, ang_max_radps)
-                    az = clamp(az, -ang_max_radps, ang_max_radps)
+                # Limitlere uydur
+                lx = clamp(lx, -lin_max, lin_max)
+                ly = clamp(ly, -lin_max, lin_max)
+                lz = clamp(lz, -lin_max, lin_max)
+                ax = clamp(ax, -ang_max, ang_max)
+                ay = clamp(ay, -ang_max, ang_max)
+                az = clamp(az, -ang_max, ang_max)
 
             else:
                 # tuş yoksa sönümle (yumuşak bırakma)
@@ -120,26 +116,16 @@ def main():
                 if abs(ay) < 1e-3: ay = 0.0
                 if abs(az) < 1e-3: az = 0.0
 
-            # TwistStamped doldur
+            # TwistStamped yayınla (m/s & rad/s)
             msg = TwistStamped()
             msg.header.stamp = rospy.Time.now()
             msg.header.frame_id = frame_id
-
-            if mode == "unitless":
-                msg.twist.linear.x  = lx
-                msg.twist.linear.y  = ly
-                msg.twist.linear.z  = lz
-                msg.twist.angular.x = ax
-                msg.twist.angular.y = ay
-                msg.twist.angular.z = az
-            else:
-                # speed_units: doğrudan m/s ve rad/s
-                msg.twist.linear.x  = lx
-                msg.twist.linear.y  = ly
-                msg.twist.linear.z  = lz
-                msg.twist.angular.x = ax
-                msg.twist.angular.y = ay
-                msg.twist.angular.z = az
+            msg.twist.linear.x  = lx
+            msg.twist.linear.y  = ly
+            msg.twist.linear.z  = lz
+            msg.twist.angular.x = ax
+            msg.twist.angular.y = ay
+            msg.twist.angular.z = az
 
             pub.publish(msg)
             rate.sleep()

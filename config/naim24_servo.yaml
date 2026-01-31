@@ -29,11 +29,11 @@ incoming_command_timeout: 0.2
 num_outgoing_halt_msgs_to_publish: 4
 use_gazebo: false
 
-# --- Scaling (speed_units olduğundan komutların gerçek birimlerde) ---
+# --- Scaling (birimleri zaten ölçülmüş, scale gereksiz) ---
 scale:
-  linear: 0.6
-  rotational: 0.6
-  joint: 0.6
+  linear: 1.0
+  rotational: 1.0
+  joint: 1.0
 
 # --- Singularity & limits ---
 lower_singularity_threshold: 30.0
