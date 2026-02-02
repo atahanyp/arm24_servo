@@ -45,9 +45,9 @@ def main():
     rate_hz  = 100.0
 
     # Hız limitleri (m/s, rad/s)
-    step      = 0.02   # Her tuşta artış miktarı
-    lin_max   = 0.25   # Maksimum lineer hız (m/s)
-    ang_max   = 0.60   # Maksimum açısal hız (rad/s)
+    step      = 0.01   # Her tuşta artış miktarı
+    lin_max   = 0.05   # Maksimum lineer hız (m/s) - 5 cm/s
+    ang_max   = 0.30   # Maksimum açısal hız (rad/s) - ~17 deg/s
     decay     = 0.90   # Tuş bırakınca yavaşlama katsayısı
 
     pub = rospy.Publisher(topic, TwistStamped, queue_size=10)
